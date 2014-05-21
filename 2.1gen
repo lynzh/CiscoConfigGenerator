@@ -560,6 +560,7 @@ do
 	then
 		A=7; B=3; C=3; D=1
 		dhcpd6conf_loop	>> "/tmp/configs/dhcpd6.conf"
+t
 		((NamingCounter++))
 	fi
 
@@ -654,6 +655,10 @@ done
 ## execute dhcpd6conf_end
 rundhcpd6conf_end
 
+
+## ## 
+## Uses $[A-P] ipv6 alphabet to addr, $lowername
+## In its first iteration, namedpv6_runtime sends information to named.slave, in its second iteration it sends to named-slave.conf
 NamingCounter=0; A="1"; B="a"; C="6"; D="0" # reiterate these settings for named.conf
 
 namedpv6_runtime()
@@ -749,12 +754,12 @@ do
 done
 
 ## ## 
-## Rewew ipv6 variables, loop rest formatted entries
-NamingCounter=0; A="1"; B="a"; C="6"; D="0"
-namedpv6_runtime # since we declared FileName on Line 483, namedpv6_runtime dumps to correct file
-
-## ##
 ## Statistical information
+## Rewew ipv6 variables, loop rest formatted entries
+# since we declared FileName on Line 483, namedpv6_runtime dumps to correct file
+
+NamingCounter=0; A="1"; B="a"; C="6"; D="0"
+namedpv6_runtime 
 
 TimeDone=$(date +'%H%M%S')
 NO=$(cat /tmp/configs/* | wc -l)
