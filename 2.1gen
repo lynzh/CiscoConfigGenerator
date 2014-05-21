@@ -3,9 +3,9 @@
 
 TimeLaunched=$(date +'%H%M%S') # Record when script was launched, used on last line
 TYPE="master"
-FileName="named.conf"
 VAR="allow-update { key DHCP_UPDATER; };" # Used in namedconf_loop()
 # Ugly parts up here, skip down for the good stuff
+FileName="named.conf"
 
 bordconf_loop()
 {
@@ -454,8 +454,8 @@ fi
 # Initial Config settings OR things that do not need to be looped
 ##################################################################
 
+FileName="named.conf"; namedconf_init >> "/tmp/configs/${FileName}"
 ciscoconf_init >> "/tmp/configs/cisco.conf"
-namedconf_init >> "/tmp/configs/${FileName}"
 dhcpdconf_init >> "/tmp/configs/dhcpd.conf"
 dhcpdconf6_init >> "/tmp/configs/dhcpd6.conf"
 
@@ -512,7 +512,7 @@ do
 	if [[ $_fourthCounter -gt 256 ]]
 	then
 		_fourthCounter=1
-	_thirdCounter=$((_thirdCounter+1))
+		_thirdCounter=$((_thirdCounter+1))
 	fi
 done
 
@@ -529,6 +529,7 @@ done
 ## 
 
 NamingCounter=0
+FileName="named.conf"
 while [[ $NamingCounter -lt $((${NamingTotal}-1)) ]];
 do
 	namedconf_loop >> "/tmp/configs/${FileName}"	 # append ${FileName} with lower case names
@@ -560,7 +561,6 @@ do
 	then
 		A=7; B=3; C=3; D=1
 		dhcpd6conf_loop	>> "/tmp/configs/dhcpd6.conf"
-t
 		((NamingCounter++))
 	fi
 
@@ -721,23 +721,22 @@ do
 done
 }
 
-namedpv6_runtime
+# Set variable; write function
+FileName="named.conf"; namedpv6_runtime
+
 
 #################################################################
 ## named-slave.conf generator part
-## kick off by naming slave variables
-#################################################################
-
 FileName="named-slave.conf" # Henceforth, let it be known that we write to file named-slave.conf
 NamingCounter=0; VAR="masters { master-ns; };"; TYPE="slave"; third=50; # ye olde variables, and some new ones
 
 ## ## 
-## USES; $NameServer1, $NameServer2, $NS1_v6, $NS2_v6, $TYPE, $second, $first,
+## Uses $NameServer1, $NameServer2, $NS1_v6, $NS2_v6, $TYPE, $second, $first,
 namedconf_init >> "/tmp/configs/${FileName}"
 
 ## ##
-## USES; $lowername, $TYPE, $VAR and counts
-while [ $NamingCounter -lt $(($NamingTotal-1)) ]
+## Uses $lowername, $TYPE, $VAR and counts
+while [[ $NamingCounter -lt $(($NamingTotal-1)) ]]
 do
 	namedconf_loop >> "/tmp/configs/${FileName}"
 	((NamingCounter++))
@@ -746,22 +745,17 @@ done
 ## ## 
 # Adding information about x.163.109.in-addr.arpa to named-slave
 # Uses $first, $second, $third, can build in $VAR and $TYPE
-while [ $third -lt 56 ]
+while [[ $third -lt 56 ]]
 do
 	# we may want to alter master-ns and type slave, leiwgz to confirm
 	namedconf_loop2_ip	>> "/tmp/configs/${FileName}"
 	((third++))
 done
 
-## ## 
-## Statistical information
-## Rewew ipv6 variables, loop rest formatted entries
-# since we declared FileName on Line 483, namedpv6_runtime dumps to correct file
-
-NamingCounter=0; A="1"; B="a"; C="6"; D="0"
-namedpv6_runtime 
+# Set variable; write function
+FileName="named-slave.conf"; NamingCounter=0; A="1"; B="a"; C="6"; D="0"; namedpv6_runtime 
 
 TimeDone=$(date +'%H%M%S')
 NO=$(cat /tmp/configs/* | wc -l)
 TimeDiff=$(( $TimeDone - $TimeLaunched ))
-echo -e " $NO lines of /tmp/configs made in $TimeDiff seconds"
+echo -e " $NO lines of rendered in $TimeDiff seconds"
