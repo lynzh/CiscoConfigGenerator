@@ -1,6 +1,7 @@
 #!/bin/bash
 # script to generate ciscoconfigs for sorlanet
 
+TimeLaunched=$(date +'%H%M%S')
 TYPE="master"
 FileName="named.conf"
 # Ugly parts up here, skip down for the good stuff
@@ -124,6 +125,41 @@ allow-transfer { ns-xfr; };\n\
 //"
 }
 
+
+dhcpdconf6_init()
+{
+echo -e "\
+#\n\
+# Sorlanet 2014 DHCPD-IPv6\n\
+# /usr/sbin/dhcpd -6 -f -cf /etc/dhcp/dhcpd6.conf eth0\n\n\
+option dhcp6.domain-search \"ipv6.party.sorlanet.net\";\n\
+option dhcp6.name-servers $NS1_v6,$NS2_v6;\n\
+ddns-update-style interim;\n\
+default-lease-time 600;\n\
+max-lease-time 7200;\n\
+log-facility local1;\n\
+option dhcp6.preference 255;\n\
+dhcpv6-leasefile-name \"/var/lib/dhcp/dhcpd6.leases\";\n\n\
+# dnssec-keygen -a HMAC-MD5 -b 128 -n HOST DHCP_UPDATER\n\n\
+key DHCP_UPDATER {\n\t\
+algorithm HMAC-MD5.SIG-ALG.REG.INT;\n\t\
+secret <REMOVED>;\n\
+}\n#\n
+# Default zone so dhcp will start, ManuaL EdiT reQUIRed\n#\n\
+zone srv.ipv6.party.sorlanet.net {\n\t\
+primary 127.0.0.1;\n\t\
+key DHCP_UPDATER;\n\
+}\n\
+subnet6 2a02:228:103:1::/64 {\n\t\
+authoritative;\n\t\
+range6 2a02:228:103:1::100 2a02:228:103:1::2000;\n\t\
+option dhcp6.domain-search \"srv.ipv6.party.sorlanet.net\";\n\t\
+ddns-domainname \"srv.ipv6.party.sorlanet.net\";\n\t\
+ignore client-updates;\n\t\
+}\n#########################################################\n
+"
+}
+
 ## ${FileName} and ${FileName} ##
 VAR="allow-update { key DHCP_UPDATER; };"
 namedconf_loop()
@@ -144,10 +180,11 @@ file \"/etc/bind/dynamic/${lowername[${NamingCounter}]}.ipv6.party.sorlanet.net\
 allow-transfer { ns-xfr; };\n\
 };"
 } 
+
 namedconf_loop2_ip()
 {
 echo -e "\
-zone \"$third.$second.$first.in-addr.arpa\" {\n\t\
+zone \"$third.$second.${first}.in-addr.arpa\" {\n\t\
 type master;\n\t\
 notify yes;\n\t\
 allow-update { key DHCP_UPDATER; };\n\t\
@@ -284,7 +321,62 @@ ignore client-updates;\n\t\
 dhcpdconf_end()
 {
 echo -e "\
-zone $third.$second.$first.in-addr.arpa { primary 127.0.0.1; key DHCP UPDATER; }\n\
+zone $third.$second.${first}.in-addr.arpa { primary 127.0.0.1; key DHCP UPDATER; }\
+"
+}
+
+namedpv6()
+{
+echo -e "\
+zone \"${A}.${B}.${C}.${D}.${E}.${F}.${G}.${H}.${I}.${J}.${K}.${L}.${M}.${N}.${O}.${P}.ip6.arpa\" {\n\t\
+type master;\n\t\
+notify yes;\n\t\
+allow-update { key DHCP_UPDATER; };\n\t\
+allow-transfer { ns-xfr; };\n\t\
+file \"/etc/bind/reverse/${lowername[${NamingCounter}]}.ipv6.reverse\"\n\
+};"
+} # Used 10min to find a double dollar sign to call a variable
+
+dhcpd6conf_loop()
+{
+echo -e "\
+zone ${lowername[${NamingCounter}]}.party.sorlanet.net {\n\t\
+primary 127.0.0.1;\n\t\
+key DHCP_UPDATER;\n\
+}\n\
+subnet6 ${P}${O}${N}${M}:${L}${K}${J}${I}:${H}${G}${F}${E}:${D}${C}${B}${A}::/64 {\n\t\
+authoritative;\n\t\
+range6 ${P}${O}${N}${M}:${L}${K}${J}${I}:${H}${G}${F}${E}:${D}${C}${B}${A}::100 ${P}${O}${N}${M}:${L}${K}${J}${I}:${H}${G}${F}${E}:${D}${C}${B}${A}::2000;\n\t\
+option dhcp6.domain-search \"${lowername[${NamingCounter}]}.ipv6.party.sorlanet.net\";\n\t\
+ddns-domainname \"${lowername[${NamingCounter}]}.ipv6.party.sorlanet.net\";\n\t\
+ignore client-updates;\n\t\
+}\n\
+#######################################################
+"
+}
+
+
+try_dhcp6()
+{
+
+7.3.3.1.3.0.1.0.8.2.2.0.2.0.a.2
+A.B.C.D.E.F.G.H.I.J.K.L.M.N.O.P
+${P}.${O}.${N}.${M}.${L}.${K}.${J}.${I}.${H}.${G}.${F}.${E}.${D}.${C}.${B}.${A}
+
+${P}${O}${N}${M}.${L}${K}${J}${I}.${H}${G}${F}${E}.${D}${C}${B}${A} # forward adress 2a02:0228:0103:cafe
+
+
+$A.$B.$C.$D.$F.$G.$H.$I.$J.$K.$L.$M.$N.$O.$P
+${A}.${B}.${C}.${D}.${E}.${F}.${G}.${H}.${I}.${J}.${K}.${L}.${M}.${N}.${O}.${P}
+$A.$B.$C.$D.$F.$G.$H.$I.$J.$K.$L.$M.$N.$O.$P
+
+
+}
+
+dhcpd6conf_end()
+{
+echo -e "\
+zone ${A}.${B}.${C}.${D}.${E}.${F}.${G}.${H}.${I}.${J}.${K}.${L}.${M}.${N}.${O}.${P}.ip6.arpa { primary 127.0.0.1; key DHCP_UPDATER; }\
 "
 }
 
@@ -292,6 +384,7 @@ zone $third.$second.$first.in-addr.arpa { primary 127.0.0.1; key DHCP UPDATER; }
 ##		Legacy Settings
 ###################################################
 
+A="1"; B="a"; C="6"; D="0"; E="3"; F="0"; G="1"; H="0"; I="8"; J="2"; K="2"; L="0"; M="2"; N="0"; O="a"; P="2";
 vlanCount=6
 # IP range variables, hey, they might change
 # first.sec.thi.ourth
@@ -304,7 +397,7 @@ NS1_v6="2a02:228:103:1::2"
 NS2_v6="2a02:228:103:1::3"
 mbd="109.163.48.6"
 nms="109.163.48.5"
-NamingCounter=1 # We count from one, since zsh/bash counts from 1, not 0
+NamingCounter=0 # We count from one, since zsh/bash counts from 1, not 0
 
 NamingScheme=( Game Tech Scene Kitchen Stands \
 R1-SW1-Fall R1-SW2-Fall R2-SW1-Fall R2-SW2-Fall R3-SW1-Fall R3-SW2-Fall R4-SW1-Fall R4-SW2-Fall \
@@ -362,6 +455,7 @@ fi
 ciscoconf_init >> "configs/cisco.conf"
 namedconf_init >> "configs/${FileName}"
 dhcpdconf_init >> "configs/dhcpd.conf"
+dhcpdconf6_init >> "configs/dhcpd6.conf"
 
 ##################################################################
 ##		Main loop, takes care of what you see
@@ -397,7 +491,7 @@ done;
 # After Main loop, store amount of times we accessed array
 NamingTotal=${NamingCounter} # Wanna record how many counts we arrived at
 # possible relic if [[ $_38 =~ ^(-[1-9][0-9]*|0)$ ]]; then
-NamingCounter=1
+NamingCounter=0
 
 while [[ $NamingCounter -lt $((${NamingTotal}-1)) ]] 
 do
@@ -422,6 +516,7 @@ done
 
 ## ##
 ## append .conf with zone info
+third=50;
 while [[ $third -lt 56 ]]; do
 	dhcpdconf_end			>> "configs/dhcpd.conf"
 	((third++))
@@ -431,7 +526,7 @@ done
 ##	r1-sw1 to r2-sw4-crew for named.conf	
 ################################################################
 
-NamingCounter=1
+NamingCounter=0
 while [[ $NamingCounter -lt $((${NamingTotal}-1)) ]];
 do
 	namedconf_loop				>> "configs/${FileName}"				# append ${FileName} with lower case names
@@ -449,22 +544,115 @@ do
 	third=$((third+1))
 done
 
+################################################################
+##	dhcpd6.conf loop stage	
+################################################################
+
+NamingCounter=0
+while [[ $NamingCounter -lt $((${NamingTotal}-1)) ]];
+do
+	((NamingCounter++))
+	dhcpd6conf_loop	>> "configs/dhcpd6.conf"
+	A=$((A+1))
+	if [[ $NamingCounter = "1" ]]
+	then
+		A=7; B=3; C=3; D=1
+		dhcpd6conf_loop	>> "configs/dhcpd6.conf"
+		((NamingCounter++))
+	fi
+
+	if [[ $NamingCounter = "2" ]]
+	then
+		A=e; B=b; C=a; D=b
+		dhcpd6conf_loop	>> "configs/dhcpd6.conf"
+		((NamingCounter++))
+	fi
+
+	if [[ $NamingCounter = "3"  ]]
+	then
+		A=e; B=f; C=a; D=c; # spells cafe:rest:00of:adress::/derp
+		dhcpd6conf_loop	>> "configs/dhcpd6.conf"
+		((NamingCounter++))
+	fi
+
+	if [[ $NamingCounter = "4" ]]
+	then
+		A=f; B=a; C=b; D=0
+		dhcpd6conf_loop	>> "configs/dhcpd6.conf"
+		((NamingCounter++))
+	fi
+
+	if [[ $NamingCounter = "5" ]]
+	then
+		A=1; B=1; C=0; D=b
+		dhcpd6conf_loop	>> "configs/dhcpd6.conf"
+		((NamingCounter++))
+		((A++))
+	fi
+	if [ $A -gt 2 ]; then A=1;	((B++)); fi
+	if [ $B -gt 9 ]; then B=1; ((C++)); fi	
+done
+
 #################################################################
 ##		named.conf ipv6 reverse generator settings
 #################################################################
 
-NamingCounter=1; A="1"; B="a"; C="6"; D="0"
-namedpv6()
+NamingCounter=0; A="1"; B="a"; C="6"; D="0"
+
+rundhcpd6conf_end()
 {
-echo -e "\
-zone \"${A}.${B}.${C}.${D}.3.0.1.0.8.2.2.0.2.0.a.2.ip6.arpa\" {\n\t\
-type master;\n\t\
-notify yes;\n\t\
-allow-update { key DHCP_UPDATER; };\n\t\
-allow-transfer { ns-xfr; };\n\t\
-file \"/etc/bind/reverse/${lowername[${NamingCounter}]}.ipv6.reverse\"\n\
-};"
-} # Used 10min to find a double dollar sign to call a variable
+while [[ $NamingCounter -lt $(($NamingTotal-1)) ]]
+do
+	dhcpd6conf_end	>> "configs/dhcpd6.conf"
+	NamingCounter=$(($NamingCounter+1))
+	A=$(($A+1))
+
+	if [[ $NamingCounter = "1" ]]
+	then
+		A=7; B=3; C=3; D=1
+		dhcpd6conf_end	>> "configs/dhcpd6.conf"
+		((NamingCounter++))
+	fi
+
+	if [[ $NamingCounter = "2" ]]
+	then
+		A=e; B=b; C=a; D=b
+		dhcpd6conf_end	>> "configs/dhcpd6.conf"
+		((NamingCounter++))
+	fi
+
+	if [[ $NamingCounter = "3"  ]]
+	then
+		A=e; B=f; C=a; D=c; # spells cafe:rest:00of:adress::/derp
+		dhcpd6conf_end	>> "configs/dhcpd6.conf"
+		((NamingCounter++))
+	fi
+
+	if [[ $NamingCounter = "4" ]]
+	then
+		A=f; B=a; C=b; D=0
+		dhcpd6conf_end	>> "configs/dhcpd6.conf"
+		((NamingCounter++))
+	fi
+
+	if [[ $NamingCounter = "5" ]]
+	then
+		A=1; B=1; C=0; D=b
+		dhcpd6conf_end	>> "configs/dhcpd6.conf"
+		((NamingCounter++))
+		((A++))
+	fi
+	
+	if [ $A -gt 2 ]; then A=1;	((B++)); fi
+	if [ $B -gt 9 ]; then B=1; ((C++)); fi
+done
+}
+
+## ##
+## execute dhcpd6conf_end
+rundhcpd6conf_end
+
+NamingCounter=0; A="1"; B="a"; C="6"; D="0" # reiterate these settings for named.conf
 
 namedpv6_runtime()
 {
@@ -474,35 +662,35 @@ do
 	NamingCounter=$(($NamingCounter+1))
 	A=$(($A+1))
 
-	if [[ $NamingCounter = "2" ]]
+	if [[ $NamingCounter = "1" ]]
 	then
 	A=7; B=3; C=3; D=1
 	namedpv6		>> "configs/${FileName}" 		# looksie
 	((NamingCounter++))
 	fi
 
-	if [[ $NamingCounter = "3" ]]
+	if [[ $NamingCounter = "2" ]]
 	then
 	A=e; B=b; C=a; D=b
 	namedpv6		>> "configs/${FileName}"			# some spaghetti
 	((NamingCounter++))
 	fi
 
-	if [[ $NamingCounter = "4"  ]]
+	if [[ $NamingCounter = "3"  ]]
 	then
 	A=e; B=f; C=a; D=c; # spells cafe:rest:00of:adress::/derp
 	namedpv6		>> "configs/${FileName}"			# code for all
 	((NamingCounter++))
 	fi
 
-	if [[ $NamingCounter = "5" ]]
+	if [[ $NamingCounter = "4" ]]
 	then
 	A=f; B=a; C=b; D=0
 	namedpv6		>> "configs/${FileName}"			# those specialized ipv6
 	((NamingCounter++))
 	fi
 
-	if [[ $NamingCounter = "6" ]]
+	if [[ $NamingCounter = "5" ]]
 	then
 	A=1; B=1; C=0; D=b
 	namedpv6		>> "configs/${FileName}"			# adresses
@@ -534,7 +722,7 @@ namedpv6_runtime
 #################################################################
 
 FileName="named-slave.conf" # Henceforth, let it be known that we write to file named-slave.conf
-NamingCounter=1; VAR="masters { master-ns; };"; TYPE="slave"; third=50; # ye olde variables, and some new ones
+NamingCounter=0; VAR="masters { master-ns; };"; TYPE="slave"; third=50; # ye olde variables, and some new ones
 
 ## ## 
 ## Print config headers 'n shit
@@ -559,12 +747,13 @@ done
 
 ## ## 
 ## Rewew ipv6 variables, loop rest formatted entries
-NamingCounter=1; A="1"; B="a"; C="6"; D="0"
+NamingCounter=0; A="1"; B="a"; C="6"; D="0"
 namedpv6_runtime # since we declared FileName on Line 483, namedpv6_runtime dumps to correct file
 
 ## ##
 ## Statistical information
 
+TimeDone=$(date +'%H%M%S')
 NO=$(cat configs/* | wc -l)
-
-echo -e " $NO lines of configs made"
+TimeDiff=$(( $TimeDone - $TimeLaunched ))
+echo -e " $NO lines of configs made in $TimeDiff seconds"
