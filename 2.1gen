@@ -327,7 +327,7 @@ option domain-name \"${lowername[${NamingCounter}]}.party.sorlanet.net\";\n\t\
 ddns-domainname \"${lowername[${NamingCounter}]}.party.sorlanet.net\";\n\t\
 ignore client-updates;\n\t\
 }\n\
-#######################################################"
+########################################################"
 }
 
 dhcpdconf_end()
@@ -397,7 +397,7 @@ NS1_v6="2a02:228:103:1::2"
 NS2_v6="2a02:228:103:1::3"
 mbd="109.163.48.6"
 nms="109.163.48.5"
-NamingCounter=0 # We count from one, since zsh/bash counts from 1, not 0
+NamingCounter=0 # bash=1, zsh=0 
 
 NamingScheme=( Game Tech Scene Kitchen Stands \
 R1-SW1-Fall R1-SW2-Fall R2-SW1-Fall R2-SW2-Fall R3-SW1-Fall R3-SW2-Fall R4-SW1-Fall R4-SW2-Fall \
@@ -525,7 +525,7 @@ done;
 # After Main loop, store amount of times we accessed naming array
 NamingTotal=${NamingCounter} # Wanna record how many counts we arrived at
 # possible relic if [[ $_38 =~ ^(-[1-9][0-9]*|0)$ ]]; then
-NamingCounter=0
+NamingCounter=1
 
 while [[ $NamingCounter -lt $((${NamingTotal}-1)) ]] 
 do
