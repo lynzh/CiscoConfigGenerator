@@ -389,12 +389,12 @@ vlanCount=6
 # IP range variables, hey, they might change
 # first.sec.thi.ourth
 first=109; second=163; third=50; fourth=226
-ipv4_helper="109.163.48.4"
-ipv6_helper="2a02:228:103:1::2"
-NameServer1="109.163.48.2"
-NameServer2="109.163.48.3"
-NS1_v6="2a02:228:103:1::2"
-NS2_v6="2a02:228:103:1::3"
+: ${ipv4_helper:="109.163.48.4"}
+: ${ipv6_helper:="2a02:228:103:1::2"}
+: ${NameServer1:="109.163.48.2"}
+: ${NameServer2:="109.163.48.3"}
+: ${NS1_v6:="2a02:228:103:1::2"}
+: ${NS2_v6:="2a02:228:103:1::3"}
 mbd="109.163.48.6"
 nms="109.163.48.5"
 NamingCounter=0 # bash=1, zsh=0 
