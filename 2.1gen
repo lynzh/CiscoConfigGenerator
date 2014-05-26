@@ -116,11 +116,11 @@ notify yes;\n\t\
 file \"/etc/bind/${second}.${first}.in-addr.arpa\"; // Edit Self\n\t\
 allow-transfer { ns-xfr; };\n\
 };\n\
-zone \"3.0.1.0.8.2.2.0.2.0.a.2.ip6.arpa\" { // Edit Self\n\t\
+zone \"${E}.${F}.${G}.${H}.${I}.${J}.${K}.${L}.${M}.${N}.${O}.${P}.ip6.arpa\" { // Edit Self\n\t\
 type $TYPE;\n\t\
 masters { master-ns; };\n\t\
 notify yes;\n\t\
-file \"/etc/bind/3.0.1.0.8.2.2.0.2.0.a.2.ip6.arpa\"; // EDIT SElF\n\t\
+file \"/etc/bind/${E}.${F}.${G}.${H}.${I}.${J}.${K}.${L}.${M}.${N}.${O}.${P}.ip6.arpa\"; // EDIT SElF\n\t\
 allow-transfer { ns-xfr; };\n\
 };\n\
 //
@@ -384,19 +384,19 @@ zone ${A}.${B}.${C}.${D}.${E}.${F}.${G}.${H}.${I}.${J}.${K}.${L}.${M}.${N}.${O}.
 ##		Legacy Settings
 ###################################################
 
-A="1"; B="a"; C="6"; D="0"; E="3"; F="0"; G="1"; H="0"; I="8"; J="2"; K="2"; L="0"; M="2"; N="0"; O="a"; P="2";
+: ${A:="1"}; B="a"; C="6"; D="0"; E="3"; F="0"; G="1"; H="0"; I="8"; J="2"; K="2"; L="0"; M="2"; N="0"; O="a"; P="2";
 vlanCount=6
 # IP range variables, hey, they might change
 # first.sec.thi.ourth
-first=109; second=163; third=50; fourth=226
+: ${first:=109}; : ${second:=163}; : ${third:=50}; : ${fourth:=226}
 : ${ipv4_helper:="109.163.48.4"}
 : ${ipv6_helper:="2a02:228:103:1::2"}
 : ${NameServer1:="109.163.48.2"}
 : ${NameServer2:="109.163.48.3"}
 : ${NS1_v6:="2a02:228:103:1::2"}
 : ${NS2_v6:="2a02:228:103:1::3"}
-mbd="109.163.48.6"
-nms="109.163.48.5"
+: ${mbd:="109.163.48.6"}
+: ${nms=:"109.163.48.5"}
 NamingCounter=0 # bash=1, zsh=0 
 
 NamingScheme=( Game Tech Scene Kitchen Stands \
@@ -498,10 +498,10 @@ dhcpdconf6_init >> "$DIR/dhcpd6.conf"
 while [[ $vlanCount -lt 182 ]] && while [[ $fourth -lt 256 ]] && while [[ $third -lt 56 ]]
 do
 	ciscoconf_loop  >> "$DIR/cisco.conf"  # cisco.conf loop
-	ciscovlanconf_loop >> "$DIR/cisco-vlan.conf" # yada
+	ciscovlanconf_loop >> "$DIR/cisco-vlan.conf" 
 	cisco_interfaceconf_loop >> "$DIR/cisco-interface.conf" 	# cisco-interface.conf loop
 	bordconf_loop  >> "$DIR/bord.conf"	 # bord.conf
-	((NamingCounter++))					 	# For every turn in this loop. we increment this counter, why not explainable
+	((NamingCounter++))	# For every turn in this loop. we increment this counter 
 	vlanCount=$((vlanCount+1)) 	 # vlan ID
 	fourth=$((fourth+33)) 		 # fourth number in IP row
 	if [ $fourth -gt 255 ]
