@@ -1,0 +1,828 @@
+#!/bin/bash
+# script to generate cisco$DIR for sorlanet
+
+TimeLaunched=$(date +'%H%M%S') # Record when script was launched, used on last line
+TYPE="master"
+VAR="allow-update { key DHCP_UPDATER; };" # Used in namedconf_loop()
+FileName="named.conf"
+
+bordconf_loop()
+{
+echo -e "${NamingScheme[${NamingCounter}]} - $first.$second.$third.$fourth"
+}
+
+ciscovlanconf_loop()
+{
+echo -e "vlan $i\n\
+ name ${NamingScheme[${NamingCounter}]}\n\
+!"
+}
+
+## ##
+## NAMED.CONF
+
+namedconf_init()
+{
+echo -e "\n\
+options {\n\t\
+directory \"/var/cache/bind\";\n\t\
+version \"The game\";\n\t\
+allow-transfer { ns-xfr; };\n\t\
+allow-query { any; };\n\t\
+allow-recursion { gimlenett; };\n\t\
+recursion yes;\n\t\
+auth-nxdomain no;\n\t\
+listen-on-v6 { any; };\n\t\
+zone-statistics yes;\n\t\
+statistics-file \"/var/cache/bind/named.stats\";\n\
+};\n\t\
+acl ns-xfr {\n\t\t\
+$NameServer1;\n\t\t\
+$NameServer2;\n\t\t\
+$NS1_v6;\n\t\t\
+$NS2_v6;\n\t\
+};\n\t\
+acl gimlenett {\n\t\t\
+109.163.48.0/21; // EDIT SELF\n\t\t\
+2a02:228:103::/48; // EDIT SELF\n\t\t\
+127.0.0.0/8;\n\t\t\
+::1;\n\t\
+};\n\t\
+logging {\n\t\t\
+channel update_debug {\n\t\t\
+file \"/var/log/named-debug.log\";\n\t\t\
+severity  debug 3;\n\t\t\
+print-category yes;\n\t\t\
+print-severity yes;\n\t\t\
+print-time     yes;\n\t\t\
+};\n\t\
+channel security_info {\n\t\t\
+file \"/var/log/named-auth.log\";\n\t\t\
+severity  info;\n\t\t\
+print-category yes;\n\t\t\
+print-severity yes;\n\t\t\
+print-time     yes;\n\t\t\
+};\n\t\t\
+channel query_log {\n\t\t\
+file \"/var/log/named-query.log\" versions 7 size 2G;\n\t\t\
+severity debug 3;\n\t\t\
+print-category yes;\n\t\t\
+print-severity yes;\n\t\t\
+print-time yes;\n\t\t\
+};\n\t\t\
+category update { update_debug; };\n\t\t\
+category security { security_info; };\n\t\t\
+category queries { query_log; };\n\t\
+};\n\
+// Key\n\
+key DHCP_UPDATER {\n\t\
+algorithm HMAC-MD5.SIG-ALG.REG.INT;\n\t\
+secret \"<REMOVED>\";\n\
+};\n\
+// prime the servers with knowledge of the root servers\n\
+zone \".\" {\n\t\
+type hint;\n\t\
+file \"/etc/bind/db.root\";\n\
+};\n\
+zone \"localhost\" {\n\t\
+type $TYPE;\n\t\
+file \"/etc/bind/db.local\";\n\
+};\n\
+zone \"127.in-addr.arpa\" {\n\t\
+type $TYPE;\n\t\
+file \"/etc/bind/db.127\";\n\
+};\n\
+zone \"0.in-addr.arpa\" {\n\t\
+type $TYPE;\n\t\
+file \"/etc/bind/db.0\";\n\
+};\n\
+zone \"255.in-addr.arpa\" {\n\t\
+type $TYPE;\n\t\
+file \"/etc/bind/db.255\";\n\
+};\n\
+//\n\
+// Pri Zones\n\
+//\n\
+zone \"sorlanet.net\" in {\n\t\
+type $TYPE;\n\t\
+allow-transfer { ns-xfr; };\n\t\
+notify yes;\n\t\
+file \"/etc/bind/sorlanet.net.zone\";\n\
+};\n\
+zone \"${second}.${first}.in-addr.arpa\" { // Edit self\n\t\
+type $TYPE;\n\t\
+allow-update { key DHCP_UPDATER; };\n\t\
+notify yes;\n\t\
+file \"/etc/bind/${second}.${first}.in-addr.arpa\"; // Edit Self\n\t\
+allow-transfer { ns-xfr; };\n\
+};\n\
+zone \"${E}.${F}.${G}.${H}.${I}.${J}.${K}.${L}.${M}.${N}.${O}.${P}.ip6.arpa\" { // Edit Self\n\t\
+type $TYPE;\n\t\
+masters { master-ns; };\n\t\
+notify yes;\n\t\
+file \"/etc/bind/${E}.${F}.${G}.${H}.${I}.${J}.${K}.${L}.${M}.${N}.${O}.${P}.ip6.arpa\"; // EDIT SElF\n\t\
+allow-transfer { ns-xfr; };\n\
+};\n\
+//
+// Bord zones\n\
+//"
+}
+
+namedconf_loop()
+{
+echo -e "\
+zone \"${lowername[${NamingCounter}]}.party.sorlanet.net\" {\n\t\
+type $TYPE;\n\t\
+${VAR}\n\t\
+notify yes;\n\t\
+file \"/etc/bind/dynamic/${lowername[${NamingCounter}]}.party.sorlanet.net\";\n\t\
+allow-transfer { ns-xfr; };\n\
+};\n\
+zone \"${lowername[${NamingCounter}]}.ipv6.party.sorlanet.net\" {\n\t\
+type $TYPE;\n\t\
+${VAR}\n\t\
+notify yes;\n\t\
+file \"/etc/bind/dynamic/${lowername[${NamingCounter}]}.ipv6.party.sorlanet.net\";\n\t\
+allow-transfer { ns-xfr; };\n\
+};"
+} 
+
+namedconf_loop2_ip()
+{
+echo -e "\
+zone \"$third.$second.${first}.in-addr.arpa\" {\n\t\
+type master;\n\t\
+notify yes;\n\t\
+allow-update { key DHCP_UPDATER; };\n\t\
+allow-transfer { ns-xfr; };\n\t\
+file \"/etc/bind/reverse/${first}.${second}.${third}.reverse\";\n\
+};"
+}
+
+namedpv6()
+{
+echo -e "\
+zone \"${A}.${B}.${C}.${D}.${E}.${F}.${G}.${H}.${I}.${J}.${K}.${L}.${M}.${N}.${O}.${P}.ip6.arpa\" {\n\t\
+type master;\n\t\
+notify yes;\n\t\
+allow-update { key DHCP_UPDATER; };\n\t\
+allow-transfer { ns-xfr; };\n\t\
+file \"/etc/bind/reverse/${lowername[${NamingCounter}]}.ipv6.reverse\"\n\
+};"
+} # Used 10min to find a double dollar sign to call a variable
+
+dhcpdconf6_init()
+{
+echo -e "\
+#\n\
+# Sorlanet 2014 DHCPD-IPv6\n\
+# /usr/sbin/dhcpd -6 -f -cf /etc/dhcp/dhcpd6.conf eth0\n\n\
+option dhcp6.domain-search \"ipv6.party.sorlanet.net\";\n\
+option dhcp6.name-servers $NS1_v6,$NS2_v6;\n\
+ddns-update-style interim;\n\
+default-lease-time 600;\n\
+max-lease-time 7200;\n\
+log-facility local1;\n\
+option dhcp6.preference 255;\n\
+dhcpv6-leasefile-name \"/var/lib/dhcp/dhcpd6.leases\";\n\n\
+# dnssec-keygen -a HMAC-MD5 -b 128 -n HOST DHCP_UPDATER\n\n\
+key DHCP_UPDATER {\n\t\
+algorithm HMAC-MD5.SIG-ALG.REG.INT;\n\t\
+secret <REMOVED>;\n\
+}\n#\n
+# Default zone so dhcp will start, ManuaL EdiT reQUIRed\n#\n\
+zone srv.ipv6.party.sorlanet.net {\n\t\
+primary 127.0.0.1;\n\t\
+key DHCP_UPDATER;\n\
+}\n\
+subnet6 2a02:228:103:1::/64 {\n\t\
+authoritative;\n\t\
+range6 2a02:228:103:1::100 2a02:228:103:1::2000;\n\t\
+option dhcp6.domain-search \"srv.ipv6.party.sorlanet.net\";\n\t\
+ddns-domainname \"srv.ipv6.party.sorlanet.net\";\n\t\
+ignore client-updates;\n\t\
+}\n#########################################################\n
+"
+}
+
+ciscoconf_init()
+{
+echo -e "!\n\
+service timestamps debug datetime msec localtime\n\
+service timestamps log datetime msec localtime\n\
+service password-encryption\n\
+logging count\n\
+logging event link-status default\n\
+ip domain-name party.sorlanet.net\n\
+!\n\
+ip ssh version 2\n\
+ip ssh time-out 10\n\
+ip ssh authentication-retries 1\n\
+ip ssh logging events\n!\n\
+ip name-server $NameServer1\n\
+ip name-server $NameServer2\n\
+!\n\
+archive\n\t\
+log config\n\t\
+logging enable\n\t\
+notify syslog contenttype plaintext\n\t\
+hidekeys\n\
+path scp://username:password@${nms}/Core.cfg_\n\
+time-period 60\n\
+!\n\
+spanning-tree mode rapid-pvst\n\
+spanning-tree portfast edge bpdugard default\n\
+spanning-tree vlan 1-4094 priority 4096\n\
+diagnostic bootup level complete\n\
+!\n\
+logging ${nms}\n\
+!\n\
+no ip http server\n\
+no ip http secure-server\n\
+!\n\
+snmp-server community CHANGEME RO\n\
+snmp ifmib ifindex persist\n\
+!\n\
+!"
+}
+
+ciscoconf_loop()
+{
+echo -e "interface vlan$i\n\t\
+description ${NamingScheme[${NamingCounter}]}\n\t\
+ip adress $first.$second.$third.$fourth 255.255.255.224\n\t\
+ip helper-adress ${ipv4_helper}\n\t\
+ip directed-broadcast\n\t\
+ipv6 adress 2a02:228:103:b102::1/64\n\t\
+ipv6 nd prefix 2a02:228:103:b102::/64 300 300 no-autoconfig\n\t\
+ipv6 nd managed-config-flag\n\t\
+ipv6 nd other-config\n\t\
+ipv6 dhcp relay destination 2a02:228:103:1::2\n\t!"
+}
+
+cisco_interfaceconf_loop()
+{
+echo -e "interface GigabitEthernet2/derp\n\
+description ### ${NamingScheme[${NamingCounter}]} ###\n\
+switchport\n\
+switchport mode access\n\
+switchport access vlan $i\n\
+!"
+}
+
+#################################################################
+##	dhcpd.conf
+##
+
+dhcpdconf_init()
+{
+echo -e "\
+#\n\
+# Sorlanet 2014 DHCPD-IPv4\n\
+#\n\
+option domain-name \"party.sorlanet.net\";\n\
+option domain-name-servers $NameServer1, $NameServer2;\n\
+option subnet-mask 255.255.255.192;\n
+ddns-update-style interim;\n\
+#ddns-rev-domainname \"163.109.in-addr.arpa\"; # Need fix\n\
+default-lease-time 600;\n\
+max-lease-time 7200;\n\
+log-facility local0;\n\
+# dnssec-keygen -a HMAC-MD5 -b 128 -n HOST DHCP_UPDATER\n\
+key DHCP_UPDATER {\n\t\
+algorithm HMAC-MD5.SIG-ALG.REG.INT;\n\t\
+secret <REMOVED>;\n\
+}\n\
+#\n\
+# default zone so dhcpd will start, manual edit need\n\
+#\n\
+zone srv.party.sorlanet.net. {\n\t\
+primary 127.0.0.1;\n\t\
+key DHCP_UPDATER;\n\
+}\n\
+subnet 109.163.48.0 netmask 255.255.255.224 {\n\t\
+authoritative;\n\t\
+range 109.163.48.25 109.163.48.30;\n\t\
+option routers 109.163.48.1;\n\t\
+option domain-name \"srv.party.sorlanet.net\";\n\t\
+ddns-domainname \"srv.party.sorlanet.net\";\n\t\
+ignore client-updates;\n\
+}\n\
+# Zones\n\
+########################################################"
+}
+
+dhcpdconf_loop0()
+{
+echo -e "\n\t\
+zone ${lowername[${NamingCounter}]}.party.sorlanet.net. {\n\t\
+primary 127.0.0.1;\n\t\
+key DHCP_UPDATER;\n\t\
+}\n\t\
+subnet ${first}.${second}.${_third[${_1TC}]}.${_1fourth38[$((${_FC} - 38 ))]} netmask 255.255.255.224 {\n\t\
+authoritative;\n\t\
+range ${first}.${second}.${_third[${_2TC}]}.${_2fourth35[$((${_FC} - 35 ))]} ${first}.${second}.${_third[${_3TC}]}.${_3fourth8[$((${_FC} - 8 ))]};\n\t\
+option routers ${first}.${second}.${_third[${_4TC}]}.${_4fourth37[$((${_FC} - 37 ))]};\n\t\
+option domain-name \"${lowername[${NamingCounter}]}.party.sorlanet.net\";\n\t\
+ddns-domainname \"${lowername[${NamingCounter}]}.party.sorlanet.net\";\n\t\
+ignore client-updates;\n\t\
+}\n\
+########################################################"
+}
+
+dhcpdconf_end()
+{
+echo -e "\
+zone $third.$second.${first}.in-addr.arpa { primary 127.0.0.1; key DHCP UPDATER; }\
+"
+}
+
+dhcpd6conf_loop()
+{
+echo -e "\
+zone ${lowername[${NamingCounter}]}.party.sorlanet.net {\n\t\
+primary 127.0.0.1;\n\t\
+key DHCP_UPDATER;\n\
+}\n\
+subnet6 ${P}${O}${N}${M}:${L}${K}${J}${I}:${H}${G}${F}${E}:${D}${C}${B}${A}::/64 {\n\t\
+authoritative;\n\t\
+range6 ${P}${O}${N}${M}:${L}${K}${J}${I}:${H}${G}${F}${E}:${D}${C}${B}${A}::100 ${P}${O}${N}${M}:${L}${K}${J}${I}:${H}${G}${F}${E}:${D}${C}${B}${A}::2000;\n\t\
+option dhcp6.domain-search \"${lowername[${NamingCounter}]}.ipv6.party.sorlanet.net\";\n\t\
+ddns-domainname \"${lowername[${NamingCounter}]}.ipv6.party.sorlanet.net\";\n\t\
+ignore client-updates;\n\t\
+}\n\
+#######################################################
+"
+}
+
+# Following function is not called later
+try_dhcp6() 
+{
+
+7.3.3.1.3.0.1.0.8.2.2.0.2.0.a.2
+A.B.C.D.E.F.G.H.I.J.K.L.M.N.O.P
+${P}.${O}.${N}.${M}.${L}.${K}.${J}.${I}.${H}.${G}.${F}.${E}.${D}.${C}.${B}.${A}
+
+${P}${O}${N}${M}.${L}${K}${J}${I}.${H}${G}${F}${E}.${D}${C}${B}${A} # forward adress 2a02:0228:0103:cafe
+
+
+$A.$B.$C.$D.$F.$G.$H.$I.$J.$K.$L.$M.$N.$O.$P
+${A}.${B}.${C}.${D}.${E}.${F}.${G}.${H}.${I}.${J}.${K}.${L}.${M}.${N}.${O}.${P}
+$A.$B.$C.$D.$F.$G.$H.$I.$J.$K.$L.$M.$N.$O.$P
+
+
+}
+
+dhcpd6conf_end()
+{
+echo -e "\
+zone ${A}.${B}.${C}.${D}.${E}.${F}.${G}.${H}.${I}.${J}.${K}.${L}.${M}.${N}.${O}.${P}.ip6.arpa { primary 127.0.0.1; key DHCP_UPDATER; }\
+"
+}
+
+###################################################
+##		Legacy Settings
+###################################################
+
+: ${A:="1"}; B="a"; C="6"; D="0"; E="3"; F="0"; G="1"; H="0"; I="8"; J="2"; K="2"; L="0"; M="2"; N="0"; O="a"; P="2";
+vlanCount=6
+# IP range variables, hey, they might change
+# first.sec.thi.ourth
+: ${first:=109}; : ${second:=163}; : ${third:=50}; : ${fourth:=226}
+: ${ipv4_helper:="109.163.48.4"}
+: ${ipv6_helper:="2a02:228:103:1::2"}
+: ${NameServer1:="109.163.48.2"}
+: ${NameServer2:="109.163.48.3"}
+: ${NS1_v6:="2a02:228:103:1::2"}
+: ${NS2_v6:="2a02:228:103:1::3"}
+: ${mbd:="109.163.48.6"}
+: ${nms=:"109.163.48.5"}
+NamingCounter=0 # bash=1, zsh=0 
+
+NamingScheme=( Game Tech Scene Kitchen Stands \
+R1-SW1-Fall R1-SW2-Fall R2-SW1-Fall R2-SW2-Fall R3-SW1-Fall R3-SW2-Fall R4-SW1-Fall R4-SW2-Fall \
+R1-SW1-Summer R1-SW2-Summer R2-SW1-Summer R2-SW2-Summer R3-SW1-Summer R3-SW2-Summer R4-SW1-Summer R4-SW2-Summer \
+R1-SW1-Winter R1-SW2-Winter R2-SW1-Winter R2-SW2-Winter R3-SW1-Winter R3-SW2-Winter R4-SW1-Winter R4-SW2-Winter \
+R1-SW1-Spring R1-SW2-Spring R2-SW1-Spring R2-SW2-Spring R3-SW1-Spring R3-SW2-Spring R4-SW1-Spring R4-SW2-Spring \
+R1-SW1-Crew R1-SW2-Crew R1-SW3-Crew R1-SW4-Crew )
+
+lowername=( game tech scene kitchen stands \
+r1-sw1-fall r1-sw2-fall r2-sw1-fall r2-sw2-fall r3-sw1-fall r3-sw2-fall r4-sw1-fall r4-sw2-fall \
+r1-sw1-summer r1-sw2-summer r2-sw1-summer r2-sw2-summer r3-sw1-summer r3-sw2-summer r4-sw1-summer r4-sw2-summer \
+r1-sw1-winter r1-sw2-winter r2-sw1-winter r2-sw2-winter r3-sw1-winter r3-sw2-winter r4-sw1-winter r4-sw2-winter \
+r1-sw1-spring r1-sw2-spring r2-sw1-spring r2-sw2-spring r3-sw1-spring r3-sw2-spring r4-sw1-spring r4-sw2-spring \
+r1-sw1-crew r1-sw2-crew r1-sw3-crew r1-sw4-crew )
+
+_FC=6
+_1TC=51
+_2TC=51
+_3TC=51
+_4TC=51
+_1fourth38=( 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 \
+32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 \
+64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 \
+96 97 98 99 100 101 102 103 104 105 106 107 108 109 110 111 112 113 114 115 116 117 118 119 120 \ 
+121 122 123 124 125 126 127 128 129 130 131 132 133 134 135 136 137 138 139 140 141 142 143 144 \
+145 146 147 148 149 150 151 152 153 154 155 156 157 158 159 160 161 162 163 164 165 166 167 168 \
+169 170 171 172 173 174 175 176 177 178 179 180 181 182 183 184 185 186 187 188 189 190 191 192 \
+193 194 195 196 197 198 199 200 201 202 203 204 205 206 207 208 209 210 211 212 213 214 215 216 \
+217 218 219 220 221 222 223 224 225 226 227 228 229 230 231 232 233 234 235 236 237 238 239 240 \
+241 242 243 244 245 246 247 248 249 250 251 252 253 254 255 )
+_2fourth35=( 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 \
+32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 \
+64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 \
+96 97 98 99 100 101 102 103 104 105 106 107 108 109 110 111 112 113 114 115 116 117 118 119 120 \ 
+121 122 123 124 125 126 127 128 129 130 131 132 133 134 135 136 137 138 139 140 141 142 143 144 \
+145 146 147 148 149 150 151 152 153 154 155 156 157 158 159 160 161 162 163 164 165 166 167 168 \
+169 170 171 172 173 174 175 176 177 178 179 180 181 182 183 184 185 186 187 188 189 190 191 192 \
+193 194 195 196 197 198 199 200 201 202 203 204 205 206 207 208 209 210 211 212 213 214 215 216 \
+217 218 219 220 221 222 223 224 225 226 227 228 229 230 231 232 233 234 235 236 237 238 239 240 \
+241 242 243 244 245 246 247 248 249 250 251 252 253 254 255 )
+_3fourth8=( 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 \
+32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 \
+64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 \
+96 97 98 99 100 101 102 103 104 105 106 107 108 109 110 111 112 113 114 115 116 117 118 119 120 \ 
+121 122 123 124 125 126 127 128 129 130 131 132 133 134 135 136 137 138 139 140 141 142 143 144 \
+145 146 147 148 149 150 151 152 153 154 155 156 157 158 159 160 161 162 163 164 165 166 167 168 \
+169 170 171 172 173 174 175 176 177 178 179 180 181 182 183 184 185 186 187 188 189 190 191 192 \
+193 194 195 196 197 198 199 200 201 202 203 204 205 206 207 208 209 210 211 212 213 214 215 216 \
+217 218 219 220 221 222 223 224 225 226 227 228 229 230 231 232 233 234 235 236 237 238 239 240 \
+241 242 243 244 245 246 247 248 249 250 251 252 253 254 255 )
+_4fourth37=( 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 \
+32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 \
+64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 \
+96 97 98 99 100 101 102 103 104 105 106 107 108 109 110 111 112 113 114 115 116 117 118 119 120 \ 
+121 122 123 124 125 126 127 128 129 130 131 132 133 134 135 136 137 138 139 140 141 142 143 144 \
+145 146 147 148 149 150 151 152 153 154 155 156 157 158 159 160 161 162 163 164 165 166 167 168 \
+169 170 171 172 173 174 175 176 177 178 179 180 181 182 183 184 185 186 187 188 189 190 191 192 \
+193 194 195 196 197 198 199 200 201 202 203 204 205 206 207 208 209 210 211 212 213 214 215 216 \
+217 218 219 220 221 222 223 224 225 226 227 228 229 230 231 232 233 234 235 236 237 238 239 240 \
+241 242 243 244 245 246 247 248 249 250 251 252 253 254 255 )
+_third=( 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 \
+33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 \
+66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96 97 98 \
+99 100 101 102 103 104 105 106 107 108 109 110 111 112 113 114 115 116 117 118 119 120 121 122 123 \
+124 125 126 127 128 129 130 131 132 133 134 135 136 137 138 139 140 141 142 143 144 145 146 147 148 \
+149 150 151 152 153 154 155 156 157 158 159 160 161 162 163 164 165 166 167 168 169 170 171 172 173 \
+174 175 176 177 178 179 180 181 182 183 184 185 186 187 188 189 190 191 192 193 194 195 196 197 198 \
+199 200 201 202 203 204 205 206 207 208 209 210 211 212 213 214 215 216 217 218 219 220 221 222 223 \
+224 225 226 227 228 229 230 231 232 233 234 235 236 237 238 239 240 241 242 243 244 245 246 247 248 \
+249 250 251 252 253 254 255 )
+
+## ##
+## Preliminary check for first time startup
+
+DIR='/tmp/configs'
+[[ ! -d $DIR ]] && mkdir $DIR
+[[ $# -lt 1 ]] && echo -e "Error, pass the argument 'fresh' to clean up $DIR, USAGE\n\t$0 {fresh}" && exit 1
+
+if [[ $1 == "fresh" ]]
+	then
+	for a in $DIR/*; do rm $a; done
+	echo -e "argument \"fresh\" initiated. Cleanup Done.\c  "
+fi
+
+##################################################################
+# Initial Config settings OR things that do not need to be looped
+##################################################################
+
+FileName="named.conf"; namedconf_init >> "$DIR/${FileName}"
+ciscoconf_init >> "$DIR/cisco.conf"
+dhcpdconf_init >> "$DIR/dhcpd.conf"
+dhcpdconf6_init >> "$DIR/dhcpd6.conf"
+
+##################################################################
+##		Main loop, takes care of what you see
+##################################################################
+
+while [[ $vlanCount -lt 182 ]] && while [[ $fourth -lt 256 ]] && while [[ $third -lt 56 ]]
+do
+	ciscoconf_loop  >> "$DIR/cisco.conf"  # cisco.conf loop
+	ciscovlanconf_loop >> "$DIR/cisco-vlan.conf" 
+	cisco_interfaceconf_loop >> "$DIR/cisco-interface.conf" 	# cisco-interface.conf loop
+	bordconf_loop  >> "$DIR/bord.conf"	 # bord.conf
+	((NamingCounter++))	# For every turn in this loop. we increment this counter 
+	vlanCount=$((vlanCount+1)) 	 # vlan ID
+	fourth=$((fourth+33)) 		 # fourth number in IP row
+	if [ $fourth -gt 255 ]
+	then
+		fourth=1  # when fourth number oversteps 232, we declare it to be 1
+		third=$((third+1))	# and we declare the third number to increment +1
+	fi
+done
+do
+	break 3
+done
+do
+	true
+done;
+
+##################################################################
+##		dhcpd.conf
+##################################################################
+
+
+# After Main loop, store amount of times we accessed naming array
+NamingTotal=${NamingCounter} # Wanna record how many counts we arrived at
+# possible relic if [[ $_38 =~ ^(-[1-9][0-9]*|0)$ ]]; then
+NamingCounter=1
+
+while [[ $NamingCounter -lt $((${NamingTotal}-1)) ]] 
+do
+	if [[ $(( $_FC - 8 )) -lt 0 ]] && [[ $(( $_FC - 35 )) -lt 0 ]] && [[ $(( $_FC - 37 )) -lt 0 ]] && [[ $(( $_FC - 38 )) -lt 0 ]] ;
+	then
+		_3TC=$((_3TC-1))
+		_2TC=$((_2TC-1))
+		_4TC=$((_4TC-1)) 
+		_1TC=$((_1TC-1))
+	elif [[ $(( $_FC - 35 )) -lt 0 ]] && [[ $(( $_FC - 37 )) -lt 0 ]] && [[ $(( $_FC - 38 )) -lt 0 ]] ;
+	then
+		_2TC=$((_2TC-1))
+		_4TC=$((_4TC-1))
+		_1TC=$((_1TC-1))
+	elif [[ $(( $_FC - 37 )) -lt 0 ]] && [[ $(( $_FC - 38 )) -lt 0 ]] ;
+	then
+		_4TC=$((_4TC-1))
+		_1TC=$((_1TC-1))	
+	elif [[ $(( $_FC - 38 )) -lt 0 ]] ; then
+		_1TC=$((_1TC-1))
+	fi
+
+	dhcpdconf_loop0 >> "$DIR/dhcpd.conf"
+	
+	if [[ $(( $_FC - 8 )) -lt 0 ]] && [[ $(( $_FC - 35 )) -lt 0 ]] && [[ $(( $_FC - 37 )) -lt 0 ]] && [[ $(( $_FC - 38 )) -lt 0 ]] ;
+	then
+		_3TC=$((_3TC+1))
+		_2TC=$((_2TC+1))
+		_4TC=$((_4TC+1)) 
+		_1TC=$((_1TC+1))
+	elif [[ $(( $_FC - 35 )) -lt 0 ]] && [[ $(( $_FC - 37 )) -lt 0 ]] && [[ $(( $_FC - 38 )) -lt 0 ]] ;
+	then
+		_2TC=$((_2TC+1))
+		_4TC=$((_4TC+1))
+		_1TC=$((_1TC+1))
+	elif [[ $(( $_FC - 37 )) -lt 0 ]] && [[ $(( $_FC - 38 )) -lt 0 ]] ;
+	then
+		_4TC=$((_4TC+1))
+		_1TC=$((_1TC+1))	
+	elif [[ $(( $_FC - 38 )) -lt 0 ]] ; then
+		_1TC=$((_1TC+1))
+	fi
+
+	_FC=$((_FC+33))
+	((NamingCounter++))
+
+	if [[ $_FC -ge 256 ]]
+	then
+		_FC=1
+		((_1TC++))
+		((_2TC++))
+		((_3TC++))
+		((_4TC++))
+	fi
+
+done
+
+## ##
+## append .conf with zone info
+third=50;
+while [[ $third -lt 56 ]]; do
+	dhcpdconf_end >> "$DIR/dhcpd.conf"
+	((third++))
+done
+
+################################################################
+## Uses $VAR,$TYPE, $lowername
+## 
+
+NamingCounter=0
+FileName="named.conf"
+while [[ $NamingCounter -lt $((${NamingTotal}-1)) ]];
+do
+	namedconf_loop >> "$DIR/${FileName}"	 # append ${FileName} with lower case names
+	((NamingCounter++))
+done
+
+################################################################
+##	50-55.163.109 for named.conf
+################################################################
+
+third=50 # declare this fucker to be 50 again, we wanna append ${FileName} after the first loop is done
+while [[ $third -lt 56 ]];
+do
+	namedconf_loop2_ip >> "$DIR/${FileName}"	 # loop2 runs adresses 50,51 to 55
+	third=$((third+1))
+done
+
+################################################################
+##	dhcpd6.conf loop stage	
+################################################################
+
+NamingCounter=0
+while [[ $NamingCounter -lt $((${NamingTotal}-1)) ]];
+do
+	((NamingCounter++))
+	dhcpd6conf_loop	>> "$DIR/dhcpd6.conf"
+	A=$((A+1))
+	if [[ $NamingCounter = "1" ]]
+	then
+		A=7; B=3; C=3; D=1
+		dhcpd6conf_loop	>> "$DIR/dhcpd6.conf"
+		((NamingCounter++))
+	fi
+
+	if [[ $NamingCounter = "2" ]]
+	then
+		A=e; B=b; C=a; D=b
+		dhcpd6conf_loop	>> "$DIR/dhcpd6.conf"
+		((NamingCounter++))
+	fi
+
+	if [[ $NamingCounter = "3"  ]]
+	then
+		A=e; B=f; C=a; D=c; # spells cafe:rest:00of:adress::/derp
+		dhcpd6conf_loop	>> "$DIR/dhcpd6.conf"
+		((NamingCounter++))
+	fi
+
+	if [[ $NamingCounter = "4" ]]
+	then
+		A=f; B=a; C=b; D=0
+		dhcpd6conf_loop	>> "$DIR/dhcpd6.conf"
+		((NamingCounter++))
+	fi
+
+	if [[ $NamingCounter = "5" ]]
+	then
+		A=1; B=1; C=0; D=b
+		dhcpd6conf_loop	>> "$DIR/dhcpd6.conf"
+		((NamingCounter++))
+		((A++))
+	fi
+	if [ $A -gt 2 ]; then A=1;	((B++)); fi
+	if [ $B -gt 9 ]; then B=1; ((C++)); fi	
+done
+
+#################################################################
+##		named.conf ipv6 reverse generator settings
+#################################################################
+
+NamingCounter=0; A="1"; B="a"; C="6"; D="0"
+
+rundhcpd6conf_end()
+{
+while [[ $NamingCounter -lt $(($NamingTotal-1)) ]]
+do
+	dhcpd6conf_end	>> "$DIR/dhcpd6.conf"
+	NamingCounter=$(($NamingCounter+1))
+	A=$(($A+1))
+
+	if [[ $NamingCounter = "1" ]]
+	then
+		A=7; B=3; C=3; D=1
+		dhcpd6conf_end	>> "$DIR/dhcpd6.conf"
+		((NamingCounter++))
+	fi
+
+	if [[ $NamingCounter = "2" ]]
+	then
+		A=e; B=b; C=a; D=b
+		dhcpd6conf_end	>> "$DIR/dhcpd6.conf"
+		((NamingCounter++))
+	fi
+
+	if [[ $NamingCounter = "3"  ]]
+	then
+		A=e; B=f; C=a; D=c; # spells cafe:rest:00of:adress::/derp
+		dhcpd6conf_end	>> "$DIR/dhcpd6.conf"
+		((NamingCounter++))
+	fi
+
+	if [[ $NamingCounter = "4" ]]
+	then
+		A=f; B=a; C=b; D=0
+		dhcpd6conf_end	>> "$DIR/dhcpd6.conf"
+		((NamingCounter++))
+	fi
+
+	if [[ $NamingCounter = "5" ]]
+	then
+		A=1; B=1; C=0; D=b
+		dhcpd6conf_end	>> "$DIR/dhcpd6.conf"
+		((NamingCounter++))
+		((A++))
+	fi
+	
+	if [ $A -gt 2 ]; then A=1; ((B++)); fi
+	if [ $B -gt 9 ]; then B=1; ((C++)); fi
+done
+}
+
+## ##
+## execute dhcpd6conf_end
+rundhcpd6conf_end
+
+
+## ## 
+## Uses $[A-P] ipv6 alphabet to addr, $lowername
+## In its first iteration, namedpv6_runtime sends information to named.slave, in its second iteration it sends to named-slave.conf
+NamingCounter=0; A="1"; B="a"; C="6"; D="0" # reiterate these settings for named.conf
+
+namedpv6_runtime()
+{
+while [[ $NamingCounter -lt $(($NamingTotal-1)) ]]
+do
+	namedpv6 >> "$DIR/${FileName}"	
+	NamingCounter=$(($NamingCounter+1))
+	A=$(($A+1))
+
+	if [[ $NamingCounter = "1" ]]
+		then
+		A=7; B=3; C=3; D=1
+		namedpv6 >> "$DIR/${FileName}"  # looksie
+		((NamingCounter++))
+	fi
+
+	if [[ $NamingCounter = "2" ]]
+		then
+		A=e; B=b; C=a; D=b
+		namedpv6 >> "$DIR/${FileName}" # some spaghetti
+		((NamingCounter++))
+	fi
+
+	if [[ $NamingCounter = "3"  ]]
+		then
+		A=e; B=f; C=a; D=c; # spells cafe:rest:00of:adress::/derp
+		namedpv6 >> "$DIR/${FileName}"
+		((NamingCounter++))
+	fi
+
+	if [[ $NamingCounter = "4" ]]
+		then
+		A=f; B=a; C=b; D=0
+		namedpv6 >> "$DIR/${FileName}" # those specialized ipv6
+		((NamingCounter++))
+	fi
+
+	if [[ $NamingCounter = "5" ]]
+		then
+		A=1; B=1; C=0; D=b
+		namedpv6 >> "$DIR/${FileName}" # adresses
+		((NamingCounter++))
+		((A++))
+	fi
+		
+	
+	if [ $A -gt 2 ];
+	then
+		A=1
+		((B++))
+	fi
+
+	if [ $B -gt 9 ];
+	then
+		B=1
+		((C++))
+	fi
+
+done
+}
+
+# Set variable; write function
+FileName="named.conf"; namedpv6_runtime
+
+
+#################################################################
+## named-slave.conf generator part
+FileName="named-slave.conf" # Henceforth, let it be known that we write to file named-slave.conf
+NamingCounter=0; VAR="masters { master-ns; };"; TYPE="slave"; third=50; # ye olde variables, and some new ones
+
+## ## 
+## Uses $NameServer1, $NameServer2, $NS1_v6, $NS2_v6, $TYPE, $second, $first,
+namedconf_init >> "$DIR/${FileName}"
+
+## ##
+## Uses $lowername, $TYPE, $VAR and counts
+while [[ $NamingCounter -lt $(($NamingTotal-1)) ]]
+do
+	namedconf_loop >> "$DIR/${FileName}"
+	((NamingCounter++))
+done
+
+## ## 
+# Adding information about x.163.109.in-addr.arpa to named-slave
+# Uses $first, $second, $third, can build in $VAR and $TYPE
+while [[ $third -lt 56 ]]
+do
+	# we may want to alter master-ns and type slave, leiwgz to confirm
+	namedconf_loop2_ip	>> "$DIR/${FileName}"
+	((third++))
+done
+
+# Set variable; write function
+FileName="named-slave.conf"; NamingCounter=0; A="1"; B="a"; C="6"; D="0"; namedpv6_runtime 
+
+TimeDone=$(date +'%H%M%S')
+NO=$(cat $DIR/* | wc -l)
+TimeDiff=$(( $TimeDone - $TimeLaunched ))
+echo -e " $NO lines of rendered in $TimeDiff seconds"
